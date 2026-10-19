@@ -156,7 +156,9 @@ Quais códigos cada função devolve está documentado no header do módulo, jun
 
 ## Git
 
-Cada módulo foi desenvolvido em uma branch `feature/<módulo>` com os testes primeiro (commit que falha contra o stub) e a implementação depois (commit que passa), integrada com `git merge --no-ff`. A versão final está na tag `v1.0`.
+O trabalho foi concluído perto do prazo, enquanto o grupo também lidava com outros projetos. Por isso, parte do histórico foi organizada por tarefa em commits concentrados no mesmo dia. Essa organização facilita localizar as mudanças, mas não representa necessariamente a ordem em que cada parte foi implementada.
+
+Os módulos estão organizados em branches `feature/<módulo>`, com commits de merge para integrá-los à `main`. A tag `v1.0` identifica a versão de entrega.
 
 ```
 git log --graph --oneline --decorate
