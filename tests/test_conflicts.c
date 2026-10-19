@@ -162,6 +162,60 @@ static void test_find_all_exact_capacity(void)
     sch_free(s);
 }
 
+static void test_nonadjacent_conflict_and_buffer_boundary(void)
+{
+    /* Insert out of order. The long event overlaps two separated short events. */
+    ts_event events[] = { {0, 660, 720}, {0, 480, 780}, {0, 540, 600} };
+    schedule *s = make(events, 3);
+    cf_pair pairs[2] = { {99, 99}, {77, 88} };
+    size_t count = 99;
+    int has = -1;
+
+    CHECK(s != NULL);
+    if (s == NULL) {
+        return;
+    }
+    CHECK_EQ(cf_has_conflict(s, &has), AGENDA_OK);
+    CHECK_EQ(has, 1);
+    CHECK_EQ(cf_find_all(s, pairs, 1, &count), AGENDA_ERR_BUFFER_TOO_SMALL);
+    CHECK_EQ(count, 2);
+    CHECK_EQ(pairs[0].first, 0);
+    CHECK_EQ(pairs[0].second, 1);
+    /* A second allocated entry exists but is outside the declared capacity. */
+    CHECK_EQ(pairs[1].first, 77);
+    CHECK_EQ(pairs[1].second, 88);
+    CHECK_EQ(cf_find_all(s, pairs, 2, &count), AGENDA_OK);
+    CHECK_EQ(count, 2);
+    CHECK_EQ(pairs[0].first, 0);
+    CHECK_EQ(pairs[0].second, 1);
+    CHECK_EQ(pairs[1].first, 0);
+    CHECK_EQ(pairs[1].second, 2);
+    sch_free(s);
+}
+
+static void test_pairs_across_day_boundary(void)
+{
+    /* Identical hours on MON and SUN; only each day's own pair conflicts. */
+    ts_event events[] = {
+        {6, 480, 600}, {0, 540, 660}, {6, 540, 660}, {0, 480, 600}
+    };
+    schedule *s = make(events, 4);
+    cf_pair pairs[6];
+    size_t count = 99;
+
+    CHECK(s != NULL);
+    if (s == NULL) {
+        return;
+    }
+    CHECK_EQ(cf_find_all(s, pairs, 6, &count), AGENDA_OK);
+    CHECK_EQ(count, 2);
+    CHECK_EQ(pairs[0].first, 0);
+    CHECK_EQ(pairs[0].second, 1);
+    CHECK_EQ(pairs[1].first, 2);
+    CHECK_EQ(pairs[1].second, 3);
+    sch_free(s);
+}
+
 int main(void)
 {
     test_has_conflict_none();
@@ -169,5 +223,7 @@ int main(void)
     test_has_conflict_args();
     test_find_all();
     test_find_all_exact_capacity();
+    test_nonadjacent_conflict_and_buffer_boundary();
+    test_pairs_across_day_boundary();
     return check_summary("conflicts");
 }

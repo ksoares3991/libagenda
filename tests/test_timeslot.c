@@ -193,6 +193,39 @@ static void test_overlaps(void)
     CHECK_EQ(ts_overlaps(&a, &a, NULL), AGENDA_ERR_ARGUMENT);
 }
 
+static void test_sunday_last_hour(void)
+{
+    ts_event e = {-1, -1, -1};
+    char text[TS_TEXT_MAX];
+    int minutes = -1;
+
+    CHECK_EQ(ts_parse("SUN 23:00-24:00", &e), AGENDA_OK);
+    CHECK_EQ(e.day, 6);
+    CHECK_EQ(e.start, 1380);
+    CHECK_EQ(e.end, 1440);
+    CHECK_EQ(ts_duration(&e, &minutes), AGENDA_OK);
+    CHECK_EQ(minutes, 60);
+    CHECK_EQ(ts_format(&e, text, sizeof text), AGENDA_OK);
+    CHECK_STREQ(text, "SUN 23:00-24:00");
+}
+
+static void test_separated_and_week_boundary(void)
+{
+    ts_event early = {0, 0, 1};
+    ts_event late = {0, 1439, 1440};
+    ts_event sunday = {6, 1439, 1440};
+    int minutes = -1;
+
+    /* Disjoint intervals on the same day, in both argument orders. */
+    CHECK_EQ(ts_overlaps(&early, &late, &minutes), AGENDA_OK);
+    CHECK_EQ(minutes, 0);
+    CHECK_EQ(ts_overlaps(&late, &early, &minutes), AGENDA_OK);
+    CHECK_EQ(minutes, 0);
+    /* The last minute on Sunday does not overlap the last minute on Monday. */
+    CHECK_EQ(ts_overlaps(&sunday, &late, &minutes), AGENDA_OK);
+    CHECK_EQ(minutes, 0);
+}
+
 int main(void)
 {
     test_parse_valid();
@@ -201,5 +234,7 @@ int main(void)
     test_format();
     test_duration();
     test_overlaps();
+    test_sunday_last_hour();
+    test_separated_and_week_boundary();
     return check_summary("timeslot");
 }
