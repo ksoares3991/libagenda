@@ -25,7 +25,7 @@ libagenda/
 ├── app/main.c          aplicação cliente (usa só a API pública)
 ├── tests/              check.h e um test_<módulo>.c por módulo, mais test_random.c
 ├── build/ lib/ bin/    gerados pela compilação (não vão para o Git)
-├── docs/               relatório, roteiro da demonstração e notas de defesa
+├── docs/               ferramentas auxiliares (mutation_test.py)
 ├── Makefile
 └── README.md
 ```
