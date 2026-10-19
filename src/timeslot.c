@@ -3,7 +3,6 @@
 #include <stdio.h>
 #include <string.h>
 
-/* Text layout: "MON 08:00-09:40" -> day(3) space(1) HH:MM(5) hyphen(1) HH:MM(5) = 15 characters. */
 #define TEXT_LEN 15
 
 static const char *const DAY_NAMES[TS_DAYS] = {
@@ -15,7 +14,7 @@ static int is_digit(char c)
     return c >= '0' && c <= '9';
 }
 
-/* Parse "HH:MM" at p (exactly five characters). Returns 1 and stores the minutes, or 0. */
+/* Lê HH:MM. Só aceita a hora 24 quando os minutos são zero. */
 static int parse_clock(const char *p, int *minutes)
 {
     int hours;
@@ -69,6 +68,7 @@ agenda_status ts_parse(const char *text, ts_event *out)
     if (end <= start) {
         return AGENDA_ERR_ARGUMENT;
     }
+    /* Só altera a saída depois de validar toda a entrada. */
     out->day = day;
     out->start = start;
     out->end = end;
@@ -116,7 +116,8 @@ agenda_status ts_overlaps(const ts_event *a, const ts_event *b, int *minutes)
     }
     lo = a->start > b->start ? a->start : b->start;
     hi = a->end < b->end ? a->end : b->end;
-    /* [start, end): events that only touch give hi == lo, hence 0 shared minutes. */
+
+    /* O término fica fora do intervalo, então eventos consecutivos não conflitam. */
     *minutes = hi > lo ? hi - lo : 0;
     return AGENDA_OK;
 }

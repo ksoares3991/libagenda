@@ -1,16 +1,7 @@
 #include <string.h>
 #include "freetime.h"
 
-/*
- * The day is modelled as a bitmap with one byte per minute: busy[m] is 1 when
- * minute m is covered by at least one event of that day. Marking each event's
- * minutes makes overlaps harmless (a minute is marked once, however many events
- * cover it), and it does not depend on the order of the events in the schedule.
- * Free windows are the maximal runs of zeros; busy time is the number of ones.
- * The cost is O(events + 1440) per call, with a 1440-byte array on the stack.
- */
-
-/* Fill busy[0..TS_DAY_MINUTES) for the given day. busy must hold TS_DAY_MINUTES bytes. */
+/* Marca cada minuto ocupado com 1; sobreposições não aumentam esse valor. */
 static agenda_status mark_busy(const schedule *s, int day, unsigned char *busy)
 {
     size_t n = sch_count(s);
@@ -23,7 +14,7 @@ static agenda_status mark_busy(const schedule *s, int day, unsigned char *busy)
             return AGENDA_ERR_RANGE;
         }
         if (ev.day == day) {
-            /* sch_add only stores valid events, so 0 <= start < end <= TS_DAY_MINUTES. */
+
             memset(busy + ev.start, 1, (size_t)(ev.end - ev.start));
         }
     }
@@ -73,6 +64,7 @@ agenda_status ft_find_free(const schedule *s, int day, ts_event *buf, size_t cap
             minute++;
             continue;
         }
+        /* Cada sequência de minutos não marcados vira uma janela livre. */
         window_start = minute;
         while (minute < TS_DAY_MINUTES && !busy[minute]) {
             minute++;

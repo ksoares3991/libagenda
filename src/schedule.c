@@ -3,14 +3,13 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-/* Internal layout, hidden from clients (the type is opaque in schedule.h). */
+/* O vetor fica ordenado por dia, início e fim. */
 struct schedule {
     size_t count;
     size_t capacity;
-    ts_event *events;   /* sorted by (day, start, end); capacity entries allocated */
+    ts_event *events;
 };
 
-/* Returns 1 if a must come after b in the sorted order (strictly greater). */
 static int is_after(const ts_event *a, const ts_event *b)
 {
     if (a->day != b->day) {
@@ -33,7 +32,8 @@ agenda_status sch_new(size_t capacity, schedule **out)
     if (capacity == 0) {
         return AGENDA_ERR_ARGUMENT;
     }
-    /* capacity * sizeof(ts_event) must not overflow size_t: refuse before allocating anything. */
+
+    /* Evita estouro no tamanho pedido à alocação. */
     if (capacity > SIZE_MAX / sizeof(ts_event)) {
         return AGENDA_ERR_NO_MEMORY;
     }
@@ -70,7 +70,7 @@ agenda_status sch_add(schedule *s, const ts_event *ev)
     if (s == NULL || ev == NULL) {
         return AGENDA_ERR_ARGUMENT;
     }
-    /* ts_duration is the validation entry point of the timeslot module. */
+
     rc = ts_duration(ev, &minutes);
     if (rc != AGENDA_OK) {
         return rc;
@@ -78,7 +78,8 @@ agenda_status sch_add(schedule *s, const ts_event *ev)
     if (s->count == s->capacity) {
         return AGENDA_ERR_FULL;
     }
-    /* Insertion sort step: shift later events one slot right. Equal keys keep insertion order. */
+
+    /* Abre espaço sem alterar a ordem dos eventos já guardados. */
     pos = s->count;
     while (pos > 0 && is_after(&s->events[pos - 1], ev)) {
         s->events[pos] = s->events[pos - 1];

@@ -1,21 +1,3 @@
-/*
- * agenda - command-line client of libagenda.
- *
- * This program only includes the public headers and only uses the public API.
- * It reads commands from standard input (one per line) or runs a scripted demo:
- *
- *   agenda --demo      run a fixed example
- *   agenda             read commands from stdin; type "help" for the list
- *
- * Commands:
- *   add DAY HH:MM-HH:MM    add an event, e.g. "add MON 08:00-09:40"
- *   list                   list the events in order
- *   conflicts              list pairs of conflicting events
- *   free DAY               list the free windows of a day, e.g. "free MON"
- *   busy DAY               total busy minutes of a day
- *   help | quit
- */
-
 #include <stdio.h>
 #include <string.h>
 
@@ -27,7 +9,8 @@
 
 #define CAPACITY 64
 #define MAX_PAIRS 256
-#define MAX_WINDOWS 64
+/* N eventos separados podem deixar N + 1 janelas livres. */
+#define MAX_WINDOWS (CAPACITY + 1)
 
 static const char *status_text(agenda_status rc)
 {
@@ -43,7 +26,7 @@ static const char *status_text(agenda_status rc)
     return "unknown error";
 }
 
-/* Convert a day name such as "MON" to 0..6 using only the public API: parse a dummy event. */
+/* Reaproveita a validação de dias da API, sem repetir a tabela de nomes. */
 static int day_from_name(const char *name)
 {
     char text[TS_TEXT_MAX];
@@ -95,6 +78,25 @@ static void cmd_list(const schedule *s)
     }
 }
 
+static void print_conflict(const schedule *s, const cf_pair *pair)
+{
+    ts_event first_event;
+    ts_event second_event;
+    char first_text[TS_TEXT_MAX];
+    char second_text[TS_TEXT_MAX];
+    int shared_minutes;
+
+    if (sch_get(s, pair->first, &first_event) != AGENDA_OK ||
+        sch_get(s, pair->second, &second_event) != AGENDA_OK ||
+        ts_format(&first_event, first_text, sizeof first_text) != AGENDA_OK ||
+        ts_format(&second_event, second_text, sizeof second_text) != AGENDA_OK ||
+        ts_overlaps(&first_event, &second_event, &shared_minutes) != AGENDA_OK) {
+        return;
+    }
+    printf("conflict: %s  x  %s  (%d min shared)\n",
+           first_text, second_text, shared_minutes);
+}
+
 static void cmd_conflicts(const schedule *s)
 {
     cf_pair pairs[MAX_PAIRS];
@@ -117,17 +119,7 @@ static void cmd_conflicts(const schedule *s)
         return;
     }
     for (i = 0; i < count && i < MAX_PAIRS; i++) {
-        ts_event a;
-        ts_event b;
-        char ta[TS_TEXT_MAX];
-        char tb[TS_TEXT_MAX];
-        int shared;
-
-        if (sch_get(s, pairs[i].first, &a) == AGENDA_OK && sch_get(s, pairs[i].second, &b) == AGENDA_OK &&
-            ts_format(&a, ta, sizeof ta) == AGENDA_OK && ts_format(&b, tb, sizeof tb) == AGENDA_OK &&
-            ts_overlaps(&a, &b, &shared) == AGENDA_OK) {
-            printf("conflict: %s  x  %s  (%d min shared)\n", ta, tb, shared);
-        }
+        print_conflict(s, &pairs[i]);
     }
     if (count > MAX_PAIRS) {
         printf("... and %zu more\n", count - MAX_PAIRS);
@@ -192,7 +184,7 @@ static void print_help(void)
            "  help | quit\n");
 }
 
-/* Run one command line. Returns 0 to stop the program, 1 to continue. */
+/* Retorna zero para encerrar a leitura e um para continuar. */
 static int run_command(schedule *s, char *line)
 {
     char cmd[16];
@@ -228,10 +220,10 @@ static void run_demo(schedule *s)
 {
     static const char *const script[] = {
         "add MON 08:00-09:40",
-        "add MON 09:20-11:00",   /* overlaps the first by 20 minutes */
-        "add MON 11:00-12:00",   /* only touches the previous one: no conflict */
+        "add MON 09:20-11:00",
+        "add MON 11:00-12:00",
         "add TUE 14:00-16:00",
-        "add MON 25:00-26:00",   /* invalid: shows error handling */
+        "add MON 25:00-26:00",
         "list",
         "conflicts",
         "free MON",

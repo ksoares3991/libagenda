@@ -1,18 +1,10 @@
 #ifndef CHECK_H
 #define CHECK_H
 
-/*
- * check.h - minimal assertion macros for the libagenda tests.
- *
- * Each test file is its own program. Assertions do not abort: they count and
- * print every failure, and check_summary() prints one PASS/FAIL line and
- * returns the process exit code (0 when nothing failed), which is what
- * `make test` uses to decide whether the run succeeded.
- */
-
 #include <stdio.h>
 #include <string.h>
 
+/* Cada programa de teste mantém seus próprios contadores. */
 static int check_total = 0;
 static int check_failed = 0;
 
@@ -26,7 +18,6 @@ static int check_failed = 0;
         }                                                                    \
     } while (0)
 
-/* Compare two integers (any integer type, status codes, enum values). */
 #define CHECK_EQ(actual, expected)                                           \
     do {                                                                     \
         long long check_a_ = (long long)(actual);                            \
@@ -51,7 +42,6 @@ static int check_failed = 0;
         }                                                                    \
     } while (0)
 
-/* Print the result line for a test program and return its exit code. */
 static int check_summary(const char *suite)
 {
     if (check_failed == 0) {
@@ -62,4 +52,4 @@ static int check_summary(const char *suite)
     return 1;
 }
 
-#endif /* CHECK_H */
+#endif

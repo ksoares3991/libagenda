@@ -1,7 +1,6 @@
 #include "freetime.h"
 #include "check.h"
 
-/* Build a schedule from a list of {day, start, end} events (times in minutes). */
 static schedule *make(const ts_event *events, size_t n)
 {
     schedule *s = NULL;
@@ -23,7 +22,6 @@ static void test_empty_day(void)
     size_t count = 99;
     int busy = -1;
 
-    /* No events: the whole day is one free window and nothing is busy. */
     CHECK_EQ(ft_total_busy(s, 0, &busy), AGENDA_OK);
     CHECK_EQ(busy, 0);
     CHECK_EQ(ft_find_free(s, 0, w, 4, &count), AGENDA_OK);
@@ -43,13 +41,13 @@ static void test_whole_day_event(void)
     CHECK_EQ(ft_total_busy(s, 2, &busy), AGENDA_OK);
     CHECK_EQ(busy, 1440);
     CHECK_EQ(ft_find_free(s, 2, w, 2, &count), AGENDA_OK);
-    CHECK_EQ(count, 0);                       /* no free window at all */
+    CHECK_EQ(count, 0);
     sch_free(s);
 }
 
 static void test_windows_between_events(void)
 {
-    /* Added out of order on purpose: the result must not depend on insertion order. */
+
     ts_event ev[] = { {1, 720, 780}, {1, 480, 600} };
     schedule *s = make(ev, 2);
     ts_event w[4];
@@ -68,17 +66,16 @@ static void test_windows_between_events(void)
 
 static void test_overlapping_events_count_once(void)
 {
-    /* 08:00-10:00, 09:00-11:00 (partial overlap), 08:20-08:40 (contained). */
+
     ts_event ev[] = { {0, 480, 600}, {0, 540, 660}, {0, 500, 520} };
     schedule *s = make(ev, 3);
     ts_event w[4];
     size_t count = 0;
     int busy = -1;
 
-    /* The union is 08:00-11:00 = 180 minutes; shared time is not counted twice. */
     CHECK_EQ(ft_total_busy(s, 0, &busy), AGENDA_OK);
     CHECK_EQ(busy, 180);
-    /* Overlaps must not create a false free window. */
+
     CHECK_EQ(ft_find_free(s, 0, w, 4, &count), AGENDA_OK);
     CHECK_EQ(count, 2);
     CHECK(w[0].start == 0 && w[0].end == 480);
@@ -99,7 +96,7 @@ static void test_identical_events_count_once(void)
 
 static void test_touching_events_leave_no_gap(void)
 {
-    ts_event ev[] = { {0, 480, 540}, {0, 540, 600} };   /* 09:00 ends, 09:00 starts */
+    ts_event ev[] = { {0, 480, 540}, {0, 540, 600} };
     schedule *s = make(ev, 2);
     ts_event w[4];
     size_t count = 0;
@@ -108,19 +105,18 @@ static void test_touching_events_leave_no_gap(void)
     CHECK_EQ(ft_total_busy(s, 0, &busy), AGENDA_OK);
     CHECK_EQ(busy, 120);
     CHECK_EQ(ft_find_free(s, 0, w, 4, &count), AGENDA_OK);
-    CHECK_EQ(count, 2);                       /* only before the first and after the last */
+    CHECK_EQ(count, 2);
     CHECK(w[0].end == 480 && w[1].start == 600);
     sch_free(s);
 }
 
 static void test_events_at_the_day_edges(void)
 {
-    ts_event ev[] = { {0, 0, 60}, {0, 1380, 1440} };   /* 00:00-01:00 and 23:00-24:00 */
+    ts_event ev[] = { {0, 0, 60}, {0, 1380, 1440} };
     schedule *s = make(ev, 2);
     ts_event w[2];
     size_t count = 0;
 
-    /* No empty window at the start or at the end of the day. */
     CHECK_EQ(ft_find_free(s, 0, w, 2, &count), AGENDA_OK);
     CHECK_EQ(count, 1);
     CHECK(w[0].start == 60 && w[0].end == 1380);
@@ -129,18 +125,18 @@ static void test_events_at_the_day_edges(void)
 
 static void test_other_days_are_ignored(void)
 {
-    ts_event ev[] = { {3, 480, 600} };                 /* THU only */
+    ts_event ev[] = { {3, 480, 600} };
     schedule *s = make(ev, 1);
     ts_event w[2];
     size_t count = 0;
     int busy = -1;
 
-    CHECK_EQ(ft_total_busy(s, 4, &busy), AGENDA_OK);   /* FRI */
+    CHECK_EQ(ft_total_busy(s, 4, &busy), AGENDA_OK);
     CHECK_EQ(busy, 0);
     CHECK_EQ(ft_find_free(s, 4, w, 2, &count), AGENDA_OK);
     CHECK_EQ(count, 1);
     CHECK(w[0].day == 4 && w[0].start == 0 && w[0].end == 1440);
-    CHECK_EQ(ft_total_busy(s, 3, &busy), AGENDA_OK);   /* THU keeps its own 120 minutes */
+    CHECK_EQ(ft_total_busy(s, 3, &busy), AGENDA_OK);
     CHECK_EQ(busy, 120);
     sch_free(s);
 }
@@ -158,13 +154,12 @@ static void test_busy_never_exceeds_a_day(void)
 
 static void test_buffer_too_small(void)
 {
-    ts_event ev[] = { {0, 100, 200}, {0, 300, 400} };  /* three windows: before, between, after */
+    ts_event ev[] = { {0, 100, 200}, {0, 300, 400} };
     schedule *s = make(ev, 2);
     ts_event w[1];
     ts_event exact[3];
     size_t count = 0;
 
-    /* Room for one: the first is written and count is the number needed. */
     CHECK_EQ(ft_find_free(s, 0, w, 1, &count), AGENDA_ERR_BUFFER_TOO_SMALL);
     CHECK_EQ(count, 3);
     CHECK(w[0].start == 0 && w[0].end == 100);
@@ -173,7 +168,6 @@ static void test_buffer_too_small(void)
     CHECK_EQ(ft_find_free(s, 0, NULL, 0, &count), AGENDA_ERR_BUFFER_TOO_SMALL);
     CHECK_EQ(count, 3);
 
-    /* A buffer of exactly the needed size works. */
     CHECK_EQ(ft_find_free(s, 0, exact, 3, &count), AGENDA_OK);
     CHECK_EQ(count, 3);
     CHECK(exact[2].start == 400 && exact[2].end == 1440);

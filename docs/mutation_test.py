@@ -1,17 +1,8 @@
 #!/usr/bin/env python3
-"""
-Mutation test of the library (used for the report, item 11).
+"""Altera uma operação por vez em cópias temporárias do código.
 
-Usage (from the project root):   python3 docs/mutation_test.py [src/file.c ...]
-
-For each source file it creates "mutants": copies of the code with ONE small
-change (== to !=, < to <=, && to ||, + to -, an error return replaced by
-AGENDA_OK, ...). For each mutant it runs `make test`. If the tests fail (or hang,
-which counts as a failure) the mutant is "killed": the tests noticed the defect.
-A "survivor" is either an equivalent mutant (the change does not alter the
-behaviour) or a gap in the tests, so every survivor has to be read by a person.
-
-The work is done on a temporary copy; the project tree is never modified.
+Se make test falhar ou exceder o tempo limite, a alteração foi detectada.
+Uso: python3 docs/mutation_test.py [src/arquivo.c ...]
 """
 import os, re, shutil, subprocess, sys, tempfile
 
